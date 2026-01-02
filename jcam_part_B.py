@@ -55,7 +55,7 @@ def compute_laplacian(u, pad_mode):
            u_pad[1:-1, 2:] + u_pad[1:-1, :-2] - 4 * u_pad[1:-1, 1:-1])
     return lap
 
-def restore_channel(f, lam=1.0, tau=0.0001, max_iter=300, tol=1e-3, 
+def restore_channel(f, lam=1, tau=0.0001, max_iter=300, tol=1e-3, 
                     sigma=3.0, pad_mode="reflect"):
     """
     Restore a single channel using the PDE: -Laplacian(u) + lambda*G(u) = f
@@ -131,12 +131,12 @@ def main():
     rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
     clean = rgb.astype(np.float32) / 255.0
 
-    # 2. PDE parameters (as discussed in the parameter selection section)
-    lam, tau = 1.0, 0.0001  # lambda=1.0, tau=0.0001 satisfies stability condition
-    max_iter, tol, sigma_G = 300, 1e-3, 3.0  # sigma_G=3.0 for Gaussian kernel
-    pad_mode = "reflect"  # Neumann-like boundary conditions
+    # 2. PDE parameters
+    lam, tau = 1.0, 0.0001
+    max_iter, tol, sigma_G = 300, 1e-3, 3.0
+    pad_mode = "reflect"
 
-    # 3. Test various noise levels - CORRECT PROTOCOL: degrade FIRST, then restore
+    # 3. Test various noise levels
     sigmas_noise = [0.09, 0.11, 0.15, 0.18]
     
     print("="*80)
@@ -152,30 +152,30 @@ def main():
         # Step 1: Degrade the clean image FIRST
         noisy = add_gaussian_noise(clean, sigma=sn)
         mse_noisy, psnr_noisy, ssim_noisy = compute_metrics(clean, noisy)
-        print(f"Noisy input:        PSNR={psnr_noisy:.2f} dB, SSIM={ssim_noisy:.4f}")
+        print(f"Noisy input:        MSE={mse_noisy:.6f}, PSNR={psnr_noisy:.2f} dB, SSIM={ssim_noisy:.4f}")
         
-        # Ablation Configuration 1: PDE only (no post-processing)
+        # Ablation Configuration 1: PDE only
         pde_restored, residuals = restore_image_color(noisy, lam, tau, max_iter, 
                                                        tol, sigma_G, pad_mode)
         mse_pde, psnr_pde, ssim_pde = compute_metrics(clean, pde_restored)
-        print(f"PDE only:           PSNR={psnr_pde:.2f} dB, SSIM={ssim_pde:.4f}")
+        print(f"PDE only:           MSE={mse_pde:.6f}, PSNR={psnr_pde:.2f} dB, SSIM={ssim_pde:.4f}")
         
         # Ablation Configuration 2: PDE + NLM
         pde_nlm = apply_nlm(pde_restored)
         mse_pde_nlm, psnr_pde_nlm, ssim_pde_nlm = compute_metrics(clean, pde_nlm)
-        print(f"PDE + NLM:          PSNR={psnr_pde_nlm:.2f} dB, SSIM={ssim_pde_nlm:.4f}")
+        print(f"PDE + NLM:          MSE={mse_pde_nlm:.6f}, PSNR={psnr_pde_nlm:.2f} dB, SSIM={ssim_pde_nlm:.4f}")
         
-        # Ablation Configuration 3: PDE + NLM + Median (full pipeline)
+        # Ablation Configuration 3: PDE + NLM + Median
         pde_nlm_med = apply_median(pde_nlm)
         mse_full, psnr_full, ssim_full = compute_metrics(clean, pde_nlm_med)
-        print(f"PDE + NLM + Median: PSNR={psnr_full:.2f} dB, SSIM={ssim_full:.4f}")
+        print(f"PDE + NLM + Median: MSE={mse_full:.6f}, PSNR={psnr_full:.2f} dB, SSIM={ssim_full:.4f}")
         
-        # Ablation Configuration 4: NLM + Median only (no PDE)
+        # Ablation Configuration 4: NLM + Median only
         nlm_med_only = apply_nlm_median(noisy)
         mse_nlm_med, psnr_nlm_med, ssim_nlm_med = compute_metrics(clean, nlm_med_only)
-        print(f"NLM + Median only:  PSNR={psnr_nlm_med:.2f} dB, SSIM={ssim_nlm_med:.4f}")
+        print(f"NLM + Median only:  MSE={mse_nlm_med:.6f}, PSNR={psnr_nlm_med:.2f} dB, SSIM={ssim_nlm_med:.4f}")
         
-        # PDE contribution = full pipeline - post-processing alone
+        # PDE contribution
         pde_contribution = psnr_full - psnr_nlm_med
         print(f"\nPDE contribution:   +{pde_contribution:.2f} dB over post-processing alone")
 
@@ -193,7 +193,7 @@ def main():
         plt.savefig(f"Figure_restoration_{sn:.2f}.png", dpi=150)
         plt.show()
         
-        # Plot convergence (residual vs iteration)
+        # Plot convergence
         plt.figure(figsize=(8, 4))
         for c, color in enumerate(['r', 'g', 'b']):
             plt.semilogy(residuals[c], color=color, alpha=0.7, label=f'Channel {c}')
