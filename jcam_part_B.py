@@ -137,7 +137,7 @@ def main():
     pad_mode = "reflect"
 
     # 3. Test various noise levels
-    sigmas_noise = [0.09, 0.11, 0.15, 0.18]
+    sigmas_noise = [0.01, 0.09, 0.11, 0.15, 0.18]
     
     print("="*80)
     print("ABLATION STUDY: Evaluating contribution of each pipeline component")
